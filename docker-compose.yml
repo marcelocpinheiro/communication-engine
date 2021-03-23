@@ -1,0 +1,15 @@
+version: '3'
+services:
+  database: 
+    image: "mysql"
+    env_file: 
+      - database.env
+    ports:
+      - '3306:3306'
+    expose: 
+      - '3306'
+    volumes: 
+      - database-data:/var/lib/mysql
+
+volumes:
+  database-data:

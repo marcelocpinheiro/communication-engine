@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -9,18 +11,34 @@ import (
 	"time"
 
 	"github.com/codegangsta/negroni"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/marcelocpinheiro/communication-engine/infrastructure/repository"
 	"github.com/marcelocpinheiro/communication-engine/management_api/api/handler"
 	"github.com/marcelocpinheiro/communication-engine/management_api/config"
+	"github.com/marcelocpinheiro/communication-engine/usecase/company"
 )
 
 func main() {
 
+	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true", config.DB_USER, config.DB_PASSWORD, config.DB_HOST, config.DB_DATABASE)
+	fmt.Println(dataSourceName)
+	db, err := sql.Open("mysql", dataSourceName)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	defer db.Close()
+
+	companyRepository := repository.NewCompanyMySQL(db)
+	companyService := company.NewService(companyRepository)
+
 	r := mux.NewRouter()
 	n := negroni.New()
 
-	handler.MakeCompanyHandlers(r, n)
+	handler.MakeCompanyHandlers(r, n, companyService)
 
 	http.Handle("/", r)
 
@@ -40,7 +58,7 @@ func main() {
 
 	log.Printf("Listening on port %d \n", config.API_PORT)
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
